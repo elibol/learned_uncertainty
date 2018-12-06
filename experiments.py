@@ -99,11 +99,40 @@ def run_gaussian_covar(data, num_samples, num_assets, pred_params, control_param
     return predicted_asset_values, investment_strategies
 
 
+def run_gaussian_cvar(data, num_samples, num_assets, pred_params, control_params):
+    beta = control_params['beta']
+    epsilon = control_params['epsilon']
+
+    prediction_model = UnbiasEstimator()
+    window = pred_params['window']
+    cvar_model = ValueAtRiskModel(num_assets=num_assets, beta=beta, epsilon=epsilon)
+
+    predicted_asset_values = np.zeros(shape=(num_samples, num_assets))
+    investment_strategies = np.zeros(shape=(num_samples, num_assets))
+    for t in range(num_samples):
+        if t <= 2:
+            continue
+        if window is None:
+            past_data = data[:t]
+        else:
+            past_data = data[max(0, t-window):t]
+        predicted_asset_value, predicted_asset_variance = prediction_model.predict(past_data)
+        predicted_asset_values[t] = predicted_asset_value
+
+        control_input = (predicted_asset_value, predicted_asset_variance)
+        cvar_model.run(control_input)
+        investment_strategy = cvar_model.variables()
+        investment_strategies[t] = investment_strategy
+
+    return predicted_asset_values, investment_strategies
+
 def run_simple_gaussian_experiments(params, plot=False, seed=1):
     num_samples = 100
     true_asset_value = params['asset_value']
     asset_covariance = params['asset_covariance']
     gamma = params['gamma']
+    beta = params['beta']
+    epsilon = params['epsilon']
     window = params['window']
     data = get_gaussian_data(num_samples, true_asset_value, asset_covariance, seed)
     data = np.clip(data, 1e-3, None)
@@ -120,9 +149,11 @@ def run_simple_gaussian_experiments(params, plot=False, seed=1):
         ("gaussian_unbiased_covar", run_gaussian_covar, {'window': None}, {"gamma": gamma}),
         ("gaussian_unbiased_l1", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_unbiased_l2", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_unbiased_cvar", run_gaussian_cvar, {'window': None}, {"beta": beta, "epsilon": epsilon}),
         ("gaussian_windowed_covar", run_gaussian_covar, {'window': window}, {"gamma": gamma}),
         ("gaussian_windowed_l1", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_windowed_l2", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_windowed_cvar", run_gaussian_cvar, {'window': window}, {"beta": beta, "epsilon": epsilon}),
     ]
 
     bar_plot_mean = []
@@ -171,11 +202,13 @@ def run_ltv_gaussian_experiments(params, plot=False, seed=1):
     true_asset_delta = params['asset_delta']
     asset_covariance = params['asset_covariance']
     gamma = params['gamma']
+    beta = params['beta']
+    epsilon = params['epsilon']
     window = params['window']
+    num_assets = true_asset_v0.shape[0]
     true_asset_value = true_asset_v0 + (true_asset_delta.T @ np.arange(0,num_samples).reshape(-1,1).T).T
-    data = get_gaussian_data(num_samples, np.zeros((3,)), asset_covariance, seed) + true_asset_value
+    data = get_gaussian_data(num_samples, np.zeros((num_assets,)), asset_covariance, seed) + true_asset_value
     data = np.clip(data, 1e-3, None)
-    num_assets = data.shape[1]
 
     if plot:
         plt.plot(data, label='Asset Values')
@@ -188,9 +221,11 @@ def run_ltv_gaussian_experiments(params, plot=False, seed=1):
         ("gaussian_unbiased_covar", run_gaussian_covar, {'window': None}, {"gamma": gamma}),
         ("gaussian_unbiased_l1", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_unbiased_l2", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_unbiased_cvar", run_gaussian_cvar, {'window': None}, {"beta": beta, "epsilon": epsilon}),
         ("gaussian_windowed_covar", run_gaussian_covar, {'window': window}, {"gamma": gamma}),
         ("gaussian_windowed_l1", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_windowed_l2", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_windowed_cvar", run_gaussian_cvar, {'window': window}, {"beta": beta, "epsilon": epsilon}),
     ]
 
     bar_plot_mean = []
@@ -238,6 +273,8 @@ def run_wiener_experiments(params, plot=False, seed=1):
     true_asset_v0 = params['asset_value']
     asset_covariance = params['asset_covariance']
     gamma = params['gamma']
+    beta = params['beta']
+    epsilon = params['epsilon']
     window = params['window']
     data = get_wiener_data(num_samples, true_asset_v0, asset_covariance, seed)
     data = np.clip(data, 1e-3, None)
@@ -254,9 +291,11 @@ def run_wiener_experiments(params, plot=False, seed=1):
         ("gaussian_unbiased_covar", run_gaussian_covar, {'window': None}, {"gamma": gamma}),
         ("gaussian_unbiased_l1", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_unbiased_l2", run_gaussian_norm, {'window': None}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_unbiased_cvar", run_gaussian_cvar, {'window': None}, {"beta": beta, "epsilon": epsilon}),
         ("gaussian_windowed_covar", run_gaussian_covar, {'window': window}, {"gamma": gamma}),
         ("gaussian_windowed_l1", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 1}),
         ("gaussian_windowed_l2", run_gaussian_norm, {'window': window}, {"gamma": gamma, "regularization": 2}),
+        ("gaussian_windowed_cvar", run_gaussian_cvar, {'window': window}, {"beta": beta, "epsilon": epsilon}),
     ]
 
     bar_plot_mean = []
@@ -302,16 +341,22 @@ if __name__ == "__main__":
     run_simple_gaussian_experiments(params={'asset_value': np.array([0.8, 1.0, 1.1]),
                                            'asset_covariance': np.diag([0.02, 0.01, 0.03]),
                                            'gamma': 1,
+                                           'beta': 0.0,
+                                           'epsilon': 0.05,
                                            'window': 10},
                                     plot=True, seed=int(time.time()))
     run_ltv_gaussian_experiments(params={'asset_value': np.array([0.9, 1.2, 1.0]),
                                         'asset_covariance': np.diag([1.0, 1.0, 0.2]) * 0.02,
                                         'asset_delta': np.array([[0.002, -0.003, 0.001]]),
                                         'gamma': 1,
+                                        'beta': 0.0,
+                                        'epsilon': 0.05,
                                         'window': 10},
                                  plot=True, seed=int(time.time()))
     run_wiener_experiments(params={'asset_value': np.array([0.9, 1.2, 1.0]),
                                   'asset_covariance': np.diag([1.0, 1.0, 0.2]) * 0.02,
                                   'gamma': 1,
+                                  'beta': 0.0,
+                                  'epsilon': 0.05,
                                   'window': 10},
                            plot=True, seed=int(time.time()))

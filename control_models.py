@@ -83,6 +83,34 @@ class CovarianceModel(ControlModel):
         return self.x.value.flatten()
 
 
+class ValueAtRiskModel(ControlModel):
+    def __init__(self, num_assets, beta=0.0, epsilon=0.05):
+        self.num_assets = num_assets
+        self.beta = beta
+        self.epsilon = epsilon
+        self.x = None
+        self.problem = None
+        self._optima = None
+
+    def run(self, data):
+        mu, sigma = data
+        self.x = cvx.Variable(self.num_assets)
+        objective = self.x.T*mu
+        self.problem = cvx.Problem(cvx.Maximize(objective),
+            [
+                cvx.norm(self.x, 1) <= 1,
+                self.x >= 0,
+                -self.x.T*mu + np.sqrt((1-self.epsilon)/self.epsilon) * cvx.sqrt(cvx.quad_form(self.x, sigma)) <= self.beta
+            ])
+        self._optima = self.problem.solve()
+
+    def optima(self):
+        return self._optima
+
+    def variables(self):
+        return self.x.value.flatten()
+
+
 if __name__ == "__main__":
     from data_models import GaussianNoise
     from prediction_models import UnbiasEstimator

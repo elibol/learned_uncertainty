@@ -22,8 +22,8 @@ def plot_residuals(runs, model_name):
 
 
 def plot_runs(runs, model_name):
-    plot_residuals(runs, model_name)
-    # plot_gamma_sweep(runs, model_name)
+    # plot_residuals(runs, model_name)
+    plot_gamma_sweep(runs, model_name)
 
 
 def main():
