@@ -32,11 +32,11 @@ class ControlModel(object):
 
 class NormModel(ControlModel):
 
-    def __init__(self, num_assets, gamma=1.0, regularization=1, nu=0.01):
+    def __init__(self, num_assets, gamma=1.0, norm=1, nu=0.01):
         super(ControlModel, CovarianceModel).__init__(self)
         self.num_assets = num_assets
         self.gamma = gamma
-        self.regularization = regularization
+        self.norm = norm
         self.nu = nu
         self.x = None
         self.x0 = None
@@ -47,9 +47,9 @@ class NormModel(ControlModel):
         x0, mu, sigma = data
         self.x0 = x0
 
-        self.x = cvx.Variable(self.num_assets)
+        self.x = cvx.Variable(self.num_assets+1)
 
-        objective = self.x.T*mu - self.gamma*cvx.norm(self.x, self.regularization)
+        objective = self.x.T*mu - self.gamma*cvx.norm(self.x, self.norm)
 
         self.problem = cvx.Problem(cvx.Maximize(objective),
                            [
@@ -65,7 +65,9 @@ class NormModel(ControlModel):
         return self.x.value.flatten()
 
     def get_input(self, L, past_data, ar_projections, ar_errors, bank_rate=1.0):
-        return ar_projections[:,0], ar_errors[:,0]
+        proj = ar_projections.T[:,0]
+        proj = np.concatenate((proj, np.array([bank_rate])))
+        return proj, ar_errors.reshape(ar_errors.shape[0], 1)[:,0]
 
     def apply_model_results(self, true_x):
         new_x = self.variables()
@@ -92,7 +94,7 @@ class CovarianceModel(ControlModel):
         x0, mu, sigma = data
         self.x0 = x0
 
-        self.x = cvx.Variable(self.num_assets)
+        self.x = cvx.Variable(self.num_assets+1)
 
         objective = self.x.T*mu - self.gamma*cvx.quad_form(self.x, sigma)
 
@@ -110,7 +112,12 @@ class CovarianceModel(ControlModel):
         return self.x.value.flatten()
 
     def get_input(self, L, past_data, ar_projections, ar_errors, bank_rate=1.0):
-        return ar_projections[:,0], ar_errors[:,0]
+        proj = ar_projections.T[:,0]
+        proj = np.concatenate((proj, np.array([bank_rate])))
+        sigma = ar_errors.reshape(ar_errors.shape[0], 1)[:, 0]
+        sigma = np.concatenate((sigma, np.array([0.0])))
+        sigma = np.diag(sigma)
+        return proj, sigma
 
     def apply_model_results(self, true_x):
         new_x = self.variables()
@@ -187,7 +194,7 @@ class MultiPeriodModel(ControlModel):
 
     def apply_model_results(self, true_x):
         updated_x = true_x.copy()
-        print(true_x.shape)
+        # print(true_x.shape)
         # modify updated_x with buy/sell changes.
         _, sell_all, buy_all = self.variables()
         sell, buy = sell_all[:, 0], buy_all[:, 0]

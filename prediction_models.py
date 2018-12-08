@@ -15,7 +15,10 @@ class PredictionModel(object):
     def __init__(self):
         pass
 
-    def predict(self, samples):
+    def fit(self, samples):
+        pass
+
+    def predict(self, samples, n):
         pass
 
 
@@ -30,7 +33,7 @@ class UnbiasGaussianEstimator(PredictionModel):
     def sample_covariance(self, samples):
         return np.cov(samples, rowvar=False)
 
-    def predict(self, samples, assume_diag=True, n=1):
+    def predict(self, samples, n=1, assume_diag=True):
         projected_means = np.empty(shape=(n, samples.shape[1]))
         projected_covariance = np.empty(shape=(n, samples.shape[1], samples.shape[1]))
         projected_samples = samples
@@ -231,7 +234,7 @@ if __name__ == "__main__":
     #     data[i] = sampler.sample((mu_truth, sigma_truth))
     #
     # L = 3
-    # sample_mean, sample_variance = UnbiasGaussianEstimator().predict(data, True, L)
+    # sample_mean, sample_variance = UnbiasGaussianEstimator().predict(data, L)
     # for l in range(L):
     #     print("\n projection", l)
     #     for i in range(num_assets):
