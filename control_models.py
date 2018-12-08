@@ -1,6 +1,6 @@
 import cvxpy as cvx
 import numpy as np
-# from scipy.linalg import sqrtm
+from scipy.linalg import sqrtm
 
 import matplotlib
 matplotlib.use('tkagg')
@@ -185,7 +185,7 @@ class MultiPeriodModel(ControlModel):
         ar_variances = np.zeros((num_assets, L))
         ar_variances[:, 1:] = np.repeat(ar_errors.reshape(-1, 1), L - 1, axis=1)
         variances = np.zeros((num_assets + 1, L))
-        variances[:-1, 1:] = ar_variances[:, :-1]
+        variances[:-1, :] = ar_variances[:, :]
 
         projections = np.ones((num_assets + 1, L)) * bank_rate
         projections[:-1, 0] = past_data.T[:, -1]
@@ -245,8 +245,13 @@ class RobustMultiPeriodModel(ControlModel):
                          [-(1-self.nu) * (1 + self.nu) * C, (1 + self.nu) ** 2 * C]] ) for C in Cl ]
         VLp1 = Cl[-1]
 
+        # print(Vl[0])
+        # np.save("vl0", Vl[0])
+        # print(sqrtm(Vl[0]))
+        # print(np.linalg.norm(Vl[0]))
+
         objective = cvx.Maximize(self.omega)
-        constraints = [self.omega <= pLp1 @ self.xi[:,self.L] - self.theta * cvx.norm(VLp1 @ self.xi[:,-1], 2),
+        constraints = [self.omega <= pLp1 @ self.xi[:,self.L] - self.theta * cvx.norm(sqrtm(VLp1 + np.eye(VLp1.shape[0])*1e-8) @ self.xi[:,-1], 2),
                        self.xi >= 0, self.eta >= 0, self.zeta >= 0,
                        self.xi[:,0] == np.divide(x0, self.R[:,0]),
                        self.xi[-1,1:] == 0]
@@ -257,7 +262,7 @@ class RobustMultiPeriodModel(ControlModel):
             # Equation 1.9
             constraints += [0 == -self.xi[:,l] + self.xi[:,l-1] - self.eta[:,l-1] + self.zeta[:,l-1],
                             0 <= (alpha[:,l-1].T @ self.eta[:,l-1] - beta[:,l-1] @ self.zeta[:,l-1] -
-                                  self.theta * cvx.norm(Vl[l-1] @ cvx.bmat([[self.eta[:,l-1], self.zeta[:,l-1]]]).T, 2))
+                                  self.theta * cvx.norm(sqrtm(Vl[l-1] + np.eye(Vl[l-1].shape[0])*1e-8) @ cvx.bmat([[self.eta[:,l-1], self.zeta[:,l-1]]]).T, 2))
                             ]
         self.problem = cvx.Problem(objective, constraints)
         self._optima = self.problem.solve()
@@ -276,8 +281,8 @@ class RobustMultiPeriodModel(ControlModel):
     def get_input(self, L, past_data, ar_projections, ar_errors, bank_rate=1.0):
         num_assets = self.num_assets
 
-        ar_variances = np.zeros((num_assets, L))
-        ar_variances[:, 1:] = np.repeat(ar_errors.reshape(-1, 1), L - 1, axis=1)
+        ar_variances = np.zeros((num_assets, L-1))
+        ar_variances[:, :] = np.repeat(ar_errors.reshape(-1, 1), L - 1, axis=1)
 
         # We want projections and variances in log space
         projections = np.zeros((num_assets + 1, L))
@@ -288,7 +293,7 @@ class RobustMultiPeriodModel(ControlModel):
 
         variances = np.zeros((num_assets + 1, L))
         # This is a first-order approximation for normally distributed data, but it's the best we have for now
-        variances[:-1, 1:] = ar_variances[:, :-1] / np.square(ar_projections.T[:, :-1])
+        variances[:-1, 1:] = ar_variances[:, :] / np.square(ar_projections.T[:, :-1])
 
         return projections, variances
 
