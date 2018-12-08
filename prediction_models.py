@@ -33,7 +33,7 @@ class UnbiasGaussianEstimator(PredictionModel):
     def sample_covariance(self, samples):
         return np.cov(samples, rowvar=False)
 
-    def predict(self, samples, n=1, assume_diag=True):
+    def predict(self, samples, n=1, assume_diag=False):
         projected_means = np.empty(shape=(n, samples.shape[1]))
         projected_covariance = np.empty(shape=(n, samples.shape[1], samples.shape[1]))
         projected_samples = samples
@@ -170,7 +170,6 @@ class OneDimensionalLogAutoRegression(OneDimensionalAutoRegression):
         for i in range(n):
             pred[plen + i] = np.dot(pred[i:i+plen], self.w)
         return pred[-n:], err
-
 
 
 def test_autoregress(noise = 0.1):

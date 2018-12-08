@@ -68,7 +68,11 @@ class NormModel(ControlModel):
     def get_input(self, L, past_data, ar_projections, ar_errors, bank_rate=1.0):
         proj = ar_projections.T[:,0]
         proj = np.concatenate((proj, np.array([bank_rate])))
-        return proj, ar_errors.reshape(ar_errors.shape[0], 1)[:,0]
+        if len(ar_errors.shape) == 3:
+            # janky way to tell what kind of error we have available.
+            return proj, ar_errors[0]
+        else:
+            return proj, ar_errors.reshape(ar_errors.shape[0], 1)[:,0]
 
     def apply_model_results(self, true_x):
         new_x = self.variables()
@@ -115,9 +119,18 @@ class CovarianceModel(ControlModel):
     def get_input(self, L, past_data, ar_projections, ar_errors, bank_rate=1.0):
         proj = ar_projections.T[:,0]
         proj = np.concatenate((proj, np.array([bank_rate])))
-        sigma = ar_errors.reshape(ar_errors.shape[0], 1)[:, 0]
-        sigma = np.concatenate((sigma, np.array([0.0])))
-        sigma = np.diag(sigma)
+
+        if len(ar_errors.shape) == 3:
+            # janky way to tell what kind of error we have available.
+            sigma_small = ar_errors[0]
+            sigma = np.zeros(shape=(sigma_small.shape[0] + 1, sigma_small.shape[1] + 1))
+            sigma[:-1, :-1] = sigma_small
+            sigma[-1, -1] = 1.0
+            return proj, sigma
+        else:
+            sigma = ar_errors.reshape(ar_errors.shape[0], 1)[:, 0]
+            sigma = np.concatenate((sigma, np.array([0.0])))
+            sigma = np.diag(sigma)
         return proj, sigma
 
     def apply_model_results(self, true_x):
