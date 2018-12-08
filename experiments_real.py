@@ -117,6 +117,8 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
         results[name]['money_values'] = money_values
         results[name]['strategies'] = investment_strategies
         print(name, "total money value", np.sum(money_values[-1]))
+        np.save(name + "-portfolio_values", money_values)
+        np.save(name + '-stategies', investment_strategies)
 
         plt.figure()
         for i in range(num_assets):
@@ -141,6 +143,6 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
 if __name__ == "__main__":
     if USE_RAY:
         ray.init()
-    run_real_experiments(L=10,
+    run_real_experiments(L=4,
                          bank_rate=1.0,
                          plot=True, seed=int(time.time()))
