@@ -55,7 +55,7 @@ def run_real_mpc(name, data, num_samples, num_assets, pred_cls, pred_params, ctr
     return net_values, investment_strategies
 
 
-def run_real_experiments(L, bank_rate, plot=False, seed=1):
+def run_experiments(L, bank_rate, plot=False, seed=1):
     max_assets = 30
     data_labels, data_dates, data = get_real_data(max_assets)
     print("date range:", data_dates[0][0], "-", data_dates[0][-1])
@@ -72,38 +72,69 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
     # Add experiments to run here.
     experiments = [
         # multiperiod with autoregressive
-        ("real_ar_mpm", run_real_mpc,
-         AutoRegression, {"p": L, "regularizer": 0.001},
-         MultiPeriodModel, {"num_assets": num_assets, "L": L - 1, "theta": 2.0, "nu": 0.01},),
+        # ("real_ar_mpm", "real_ar_mpm", run_real_mpc,
+        #  AutoRegression, {"p": L, "regularizer": 0.001},
+        #  MultiPeriodModel, {"num_assets": num_assets, "L": L - 1, "theta": 2.0, "nu": 0.01},),
 
         # multiperiod robust with autoregressive
-        # ("real_ar_mpm_robust", run_real_mpc,
+        # ("real_ar_mpm_robust", "real_ar_mpm_robust", run_real_mpc,
         #  AutoRegression, {"p": L, "regularizer": 0.001},
         #  RobustMultiPeriodModel, {"num_assets": num_assets, "L": L - 1, "theta": 0.0, "nu": 0.01},),
 
-        # # L1-norm model with unbias gaussian
-        # ("real_unbias_norm", run_real_mpc,
-        #  UnbiasGaussianEstimator, {},
-        #  NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 2, "nu": 0.01},),
-
-        # L1-norm model with unbias gaussian
-        # ("real_ar_norm", run_real_mpc,
+        # L1-norm model with autoregression
+        # ("real_ar_l1", "real_ar_l1", run_real_mpc,
         #  AutoRegression, {"p": L, "regularizer": 0.1},
-        #  NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 2, "nu": 0.01},),
-
-        # Weighted-norm model with unbias gaussian
-        ("real_unbias_weighted", run_real_mpc,
-         UnbiasGaussianEstimator, {},
-         CovarianceModel, {"num_assets": num_assets, "gamma": 1.0, "nu": 0.01},),
+        #  NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 1, "nu": 0.01},),
 
         # Weighted-norm model with autoregression
-        ("real_ar_weighted", run_real_mpc,
+        # ("real_ar_weighted", "real_ar_weighted", run_real_mpc,
+        #  AutoRegression, {"p": L, "regularizer": 0.001},
+        #  CovarianceModel, {"num_assets": num_assets, "gamma": 1.0, "nu": 0.01},),
+
+        # # L1-norm model with unbias gaussian
+        ("real_unbias_l1", "Unbiased L1", run_real_mpc,
+         UnbiasGaussianEstimator, {},
+         NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 1, "nu": 0.01},),
+
+        # # L2-norm model with unbias gaussian
+        ("real_unbias_l2", "Unbiased L2", run_real_mpc,
+         UnbiasGaussianEstimator, {},
+         NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 2, "nu": 0.01},),
+
+        # Weighted-norm model with unbias gaussian
+        ("real_unbias_weighted", "Unbiased Weighted", run_real_mpc,
+         UnbiasGaussianEstimator, {},
+         CovarianceModel, {"num_assets": num_assets, "gamma": 2.0, "nu": 0.01},),
+
+        # Unregularized model with unbias gaussian
+        ("real_unbias_unregularized", "Unbiased Unregularized", run_real_mpc,
+         UnbiasGaussianEstimator, {},
+         NormModel, {"num_assets": num_assets, "gamma": 0.0, "norm": 2, "nu": 0.01},),
+
+        # # L1-norm model with unbias gaussian
+        ("real_ar_l1", "Autoregressive L1", run_real_mpc,
          AutoRegression, {"p": L, "regularizer": 0.001},
-         CovarianceModel, {"num_assets": num_assets, "gamma": 1.0, "nu": 0.01},),
+         NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 1, "nu": 0.01},),
+
+        # # L2-norm model with unbias gaussian
+        ("real_ar_l2", "Autoregressive L2", run_real_mpc,
+         AutoRegression, {"p": L, "regularizer": 0.001},
+         NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 2, "nu": 0.01},),
+
+        # Weighted-norm model with unbias gaussian
+        ("real_ar_weighted", "Autoregressive Weighted", run_real_mpc,
+         AutoRegression, {"p": L, "regularizer": 0.001},
+         CovarianceModel, {"num_assets": num_assets, "gamma": 2.0, "nu": 0.01},),
+
+        # Unregularized model with unbias gaussian
+        ("real_ar_unregularized", "Autoregressive Unregularized", run_real_mpc,
+         AutoRegression, {"p": L, "regularizer": 0.001},
+         NormModel, {"num_assets": num_assets, "gamma": 0.0, "norm": 2, "nu": 0.01},),
+
     ]
 
     results = {}
-    for name, experiment_func, pred_cls, pred_params, ctrl_cls, control_params in experiments:
+    for name, label, experiment_func, pred_cls, pred_params, ctrl_cls, control_params in experiments:
         money_values, investment_strategies = experiment_func(name,
                                                               data,
                                                               num_samples,
@@ -114,6 +145,7 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
                                                               control_params,
                                                               bank_rate, L)
         results[name] = {}
+        results[name]['label'] = label
         results[name]['money_values'] = money_values
         results[name]['strategies'] = investment_strategies
         print(name, "total money value", np.sum(money_values[-1]))
@@ -124,18 +156,22 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
         for i in range(num_assets):
             plt.plot(investment_strategies[:, i], label=data_labels[i], alpha=0.5)
         plt.legend()
-        plt.title("Investment Strategy ("+name+")")
-        plt.savefig("figures/real_data/investment_strat_"+name+".png")
+        plt.xlabel("Days")
+        plt.ylabel("Portfolio Allocation")
+        plt.title("Portfolio Allocation ("+label+")")
+        plt.savefig("figures/real_data/investment_strat_"+name+".pdf", bbox_inches='tight')
 
     if plot:
         plt.figure()
         for name in results:
             money_values = results[name]['money_values']
             total_values = np.sum(money_values, axis=1)
-            plt.plot(total_values, label=name, alpha=0.5)
+            plt.plot(total_values, label=results[name]['label'], alpha=0.5)
         plt.legend()
-        plt.title("Money Comparison")
-        plt.savefig("figures/real_data/money_comparison.png")
+        plt.xlabel("Days")
+        plt.ylabel("Portfolio Value")
+        plt.title("Portfolio Value Comparison")
+        plt.savefig("figures/real_data/money_comparison.pdf", bbox_inches='tight')
 
     return results
 
@@ -143,6 +179,6 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
 if __name__ == "__main__":
     if USE_RAY:
         ray.init()
-    run_real_experiments(L=4,
-                         bank_rate=1.0,
-                         plot=True, seed=int(time.time()))
+    run_experiments(L=2,
+                    bank_rate=1.0,
+                    plot=True, seed=int(time.time()))
