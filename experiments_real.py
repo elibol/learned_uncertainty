@@ -46,7 +46,7 @@ def run_real_mpc(name, data, num_samples, num_assets, pred_cls, pred_params, ctr
 
         current_x = observed_returns * investment_strategy
         net_values[t] = current_x
-        # print("sum(current_x)", np.sum(current_x))
+        print("sum(current_x)", np.sum(current_x))
 
     return net_values, investment_strategies
 
@@ -71,10 +71,15 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
          AutoRegression, {"p": L, "regularizer": 0.001},
          MultiPeriodModel, {"num_assets": num_assets, "L": L - 1, "theta": 2.0, "nu": 0.01},),
 
-        # L1-norm model with unbias gaussian
-        ("real_ar_norm", run_real_mpc,
+        # multiperiod robust with autoregressive
+        ("real_ar_mpm_robust", run_real_mpc,
          AutoRegression, {"p": L, "regularizer": 0.001},
-         NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 1, "nu": 0.01},),
+         RobustMultiPeriodModel, {"num_assets": num_assets, "L": L - 1, "theta": 0.0, "nu": 0.01},),
+
+        # # L1-norm model with unbias gaussian
+        # ("real_ar_norm", run_real_mpc,
+        #  AutoRegression, {"p": L, "regularizer": 0.001},
+        #  NormModel, {"num_assets": num_assets, "gamma": 1.0, "norm": 1, "nu": 0.01},),
 
         # Weighted-norm model with unbias gaussian
         ("real_ar_weighted", run_real_mpc,
@@ -103,7 +108,7 @@ def run_real_experiments(L, bank_rate, plot=False, seed=1):
             plt.plot(investment_strategies[:, i], label=data_labels[i], alpha=0.5)
         plt.legend()
         plt.title("Investment Strategy ("+name+")")
-        plt.savefig("figures//real_data/investment_strat_"+name+".png")
+        plt.savefig("figures/real_data/investment_strat_"+name+".png")
 
     if plot:
         plt.figure()
