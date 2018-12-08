@@ -11,8 +11,20 @@ import time
 
 # Documentation: https://www.alphavantage.co/documentation/
 api_key = "QCI3RT39F1VOUR21"
-stocks = ["MSFT", "AAPL", "GOOGL", "AMZN", "FB", "NFLX", "IBM", "TSLA"]
+tech_stocks = ["MSFT", "AAPL", "GOOGL", "AMZN", "FB", "NFLX", "IBM", "TSLA"]
+DJIA = ["MMM", "AXP", "AAPL", "BA", "CAT", "CVX", "CSCO", "KO", "DIS", "DWDP", "XOM",
+        "GS", "HD", "IBM", "INTC", "JNJ", "JPM", "MCD", "MRK", "MSFT", "NKE", "PFE",
+        "PG", "TRV", "UTX", "UNH", "VZ", "V", "WMT", "WBA"]
+SP500 = ["AAPL", "ABBV", "ABT", "ACN", "AGN", "AIG", "ALL", "AMGN", "AMZN", "AXP", "BA", "BAC", "BIIB",
+        "BK", "BKNG", "BLK", "BMY", "BRK.B", "C", "CAT", "CELG", "CHTR", "CL", "CMCSA", "COF", "COP",
+        "COST", "CSCO", "CVS", "CVX", "DHR", "DIS", "DUK", "DWDP", "EMR", "EXC", "F", "FB", "FDX", "FOX",
+        "FOXA", "GD", "GE", "GILD", "GM", "GOOG", "GOOGL", "GS", "HAL", "HD", "HON", "IBM", "INTC", "JNJ",
+        "JPM", "KHC", "KMI", "KO", "LLY", "LMT", "LOW", "MA", "MCD", "MDLZ", "MDT", "MET", "MMM", "MO",
+        "MRK", "MS", "MSFT", "NEE", "NFLX", "NKE", "NVDA", "ORCL", "OXY", "PEP", "PFE", "PG", "PM", "PYPL",
+        "QCOM", "RTN", "SBUX", "SLB", "SO", "SPG", "T", "TGT", "TXN", "UNH", "UNP", "UPS", "USB", "UTX",
+        "V", "VZ", "WBA", "WFC", "WMT", "XOM"]
 
+stocks = DJIA
 
 def daily_value_estimate(daily_value_dict):
     open_val = float(daily_value_dict["1. open"])
